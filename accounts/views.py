@@ -104,6 +104,11 @@ def login(request):
                 return redirect(request.GET.get("next") or "articles:index")
         else:
             messages.warning(request, "탈퇴한 계정입니다.")
+            username = request.POST.get("username")
+            if get_user_model().objects.filter(username=username).exists():
+                messages.warning(request, "탈퇴한 사용자입니다.")
+            else:
+                messages.warning(request, "비밀번호 혹은 아이디가 존재하지 않습니다.")
     else:
         form = AuthenticationForm()
     context = {
@@ -194,7 +199,7 @@ def github_login(request):
         if request.user.is_authenticated:
             raise SocialLoginException("User already logged in")
         client_id = os.environ.get("GITHUB_ID")
-        redirect_uri = "http://127.0.0.1:8000/accounts/login/github/callback"
+        redirect_uri = "http://kdt2ndpjt11tbean-env.eba-xpyvx2pg.ap-northeast-2.elasticbeanstalk.com/accounts/login/github/callback"
         return redirect(
             f"https://github.com/login/oauth/authorize?client_id={client_id}&redirect_uri={redirect_uri}&scope=read:user"
         )  # 👈 사용자가 승인을 누르면, redirect_uri 경로로 redirect 됩니다.
@@ -313,6 +318,26 @@ def follow(request, user_pk):
     return JsonResponse(data)
 
 
+@login_required
+def dfollowing(request, pk):
+    # 로그인한 유저가프로필에 해당하는 유저를
+    user = get_object_or_404(get_user_model(), pk=pk)
+    if request.user != user:
+        if user in request.user.follow.all():
+            request.user.follow.remove(user)
+        return redirect("accounts:follow_page", request.user.pk)
+
+
+@login_required
+def dfollow(request, pk):
+    # 로그인한 유저가프로필에 해당하는 유저를
+    user = get_object_or_404(get_user_model(), pk=pk)
+    if request.user != user:
+        if user in request.user.followers.all():
+            request.user.followers.remove(user)
+        return redirect("accounts:follow_page", request.user.pk)
+
+
 def note(request):
 
     notes = Note.objects.filter(receive_user=request.user).order_by("-pk")
@@ -347,6 +372,7 @@ def create_note(request):
         if note_form.is_valid():
             note = note_form.save(commit=False)
             note.send_user = request.user
+            note.read_check_user = User.objects.get(username=note.receive_user)
             note.save()
             return redirect("accounts:note")
 
@@ -367,9 +393,9 @@ def detail_note(request, note_pk):
         if request.user.username == note.receive_user:
 
             note.read_check = note.receive_user
+            note.read_check_user = None
             note.save()
 
-        print(note.read_check)
         context = {
             "note": note,
         }
@@ -408,7 +434,9 @@ def follow_page(request, pk):
     # follow = follow && followers = following
     followings = user.follow.all()
     followers = user.followers.all()
+
     context = {
+        "user": user,
         "followings": followings,
         "followers": followers,
     }

@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,14 +26,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-qs%$+ei^e0(01$(0#kj*!)@jl$r&$*fvinvr6%$=5vryqhu@=e"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "Kdt2ndpjt11tbean-env.eba-xpyvx2pg.ap-northeast-2.elasticbeanstalk.com",]
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    "storages",
     "social_django",
     "accounts",
     "articles",
@@ -71,10 +73,8 @@ LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
 SOCIAL_AUTH_URL_NAMESPACE = "social"
 # 아래 두개는 키분리 필수
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = (
-    "340738760028-gfruul255kk67hnucn8sk7anifavghbu.apps.googleusercontent.com"
-)
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = "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"
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.getenv("SOCIAL_AUTH_GOOGLE_OAUTH2_KEY")
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.getenv("SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET")
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
 
 SOCIAL_AUTH_PIPELINE = (
@@ -161,13 +161,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
 
 STATIC_URL = "/static/"
+STATIC_ROOT = 'staticfiles'
 
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, "static"),
+    BASE_DIR / "static",
 ]
-
-STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
-
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
@@ -178,11 +176,47 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"
 
 # Media files (user uploaded filed)
-MEDIA_URL = "/media/"
+# MEDIA_URL = "/media/"
 
-MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+# MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 # Message Framework
 # https://docs.djangoproject.com/en/4.1/ref/contrib/messages/
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.cookie.CookieStorage"
+
+
+DEBUG = os.getenv("DEBUG") == "True"
+
+if DEBUG: 
+    MEDIA_URL = "/media/"
+    MEDIA_ROOT = BASE_DIR / "media"
+    DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
+else:   
+    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+
+    AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+    AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+    AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
+
+    AWS_REGION = "ap-northeast-2"
+    AWS_S3_CUSTOM_DOMAIN = "%s.s3.%s.amazonaws.com" % (
+        AWS_STORAGE_BUCKET_NAME,
+        AWS_REGION,
+    )
+    DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "kdt_2ndpjt_11t_rds", # 코드 블럭 아래 이미지 참고하여 입력
+        "USER": "postgres",
+        "PASSWORD": "1q2w3e4r!!", # 데이터베이스 생성 시 작성한 패스워드
+        "HOST": "kda-2ndpjt-11t-db.crxdhzab0x6i.ap-northeast-2.rds.amazonaws.com", # 코드 블럭 아래 이미지 참고하여 입력
+        "PORT": "5432",
+        }
+    }
