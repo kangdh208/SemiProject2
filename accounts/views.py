@@ -98,10 +98,12 @@ def detail(request, pk):
 def login(request):
     if request.method == "POST":
         form = AuthenticationForm(request, data=request.POST)
-        if form.is_valid():
-            auth_login(request, form.get_user())
-            return redirect(request.GET.get("next") or "articles:index")
+        if request.user.is_active == 1:
+            if form.is_valid():
+                auth_login(request, form.get_user())
+                return redirect(request.GET.get("next") or "articles:index")
         else:
+            messages.warning(request, "탈퇴한 계정입니다.")
             username = request.POST.get("username")
             if get_user_model().objects.filter(username=username).exists():
                 messages.warning(request, "탈퇴한 사용자입니다.")
